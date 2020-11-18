@@ -6,6 +6,7 @@ output: github_document
 
 ```{r setup, include = FALSE}
 library(tidyverse)
+library(patchwork)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -44,7 +45,7 @@ homicide_df =
   filter(city_state != "Tulsa_AL")
 ```
 
-**Data exploration**
+**Data exploration.**
 
 ```{r}
 aggregate_df = 
@@ -56,7 +57,7 @@ aggregate_df =
   )
 ```
 
-**Prop test for a single city**
+**Prop test for a single city.**
 
 ```{r}
 prop.test(
@@ -65,7 +66,7 @@ prop.test(
   broom::tidy()
 ```
 
-**Iteration**
+**Iteration.**
 
 ```{r}
 results_df = 
@@ -80,7 +81,6 @@ results_df =
 ```
 
 
-
 ```{r}
 results_df %>% 
   mutate(city_state = fct_reorder(city_state, estimate)) %>% 
@@ -89,7 +89,6 @@ results_df %>%
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
-
 
 
 ```{r, error = TRUE}
@@ -140,14 +139,106 @@ lda_tidydf =
     )
 ```
 
-**Spaghetti plot of observations on each subject over time**
+**Spaghetti plot of observations.**
 
 ```{r, message = FALSE, warning = FALSE}
 lda_tidydf %>% 
   ggplot(aes(x = week, y = obsv, group = interaction(id, group), color = group)) + 
-    geom_line()
+    geom_line() +
+    labs(title = "Observations on each subject over time")
 ```
 
 Based on the spaghetti plot, we can observe that observation values for the experimental group are generally higher than the control group. The experimental group shows some increase in values over time while the control group remains relatively stable.
 
 
+## Problem 3
+
+**Create and run simulation.**
+ 
+```{r simulation_test, message = FALSE, warning = FALSE}
+sim_ttest = 
+  function(n = 30, mu, sigma = 5) {
+    
+      sim_data = 
+        tibble(
+          x = rnorm(n = 30, mean = mu, sd = sigma)
+        )
+      
+sim_data %>% 
+  t.test() %>% 
+  broom::tidy() %>% 
+  select(estimate, p.value)
+  }
+
+sim_results = 
+  tibble(mu = c(0,1,2,3,4,5,6)) %>%
+  mutate(
+    output_lists = map(.x = mu, ~ rerun(5000, sim_ttest(n = 30, mu = .x))),
+    estimate_df = map(output_lists, bind_rows)
+    ) %>%
+  select(-output_lists) %>% 
+  unnest(estimate_df) %>% 
+  mutate(decision = ifelse(p.value<0.05, "reject", "fail to reject"))
+```
+
+**Plot showing the proportion of times the null was rejected.**
+
+```{r plot_power, message = FALSE, warning = FALSE}
+plot_power =
+  sim_results %>% 
+  group_by(mu) %>%
+  summarise(
+    n = n(),
+    reject = sum(p.value < 0.05)/n) %>% 
+  ggplot(aes(x = mu, y = reject)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(
+    x = "effect size",
+    y = "power"
+  )
+
+plot_power
+```
+
+Based on this plot, we can observe that as effect size increases, power (proportion of times null was rejected) increases. 
+
+**Plot showing the average estimate of μ̂ on the y axis and the true value of μ on the x axis.**
+
+```{r, message = FALSE, warning = FALSE}
+plot_1 =
+  sim_results %>% 
+  group_by(mu) %>% 
+  summarise(avg_estimate = mean(estimate)) %>% 
+  ggplot(aes(x = mu, y = avg_estimate)) +
+  geom_point() +
+  geom_line() +
+    labs(
+    x = "true mean",
+    y = "average estimate",
+    title = "Avg estimate vs. true mean"
+  ) 
+```
+
+**Plot showing the average estimate of μ̂ only in samples for which the null was rejected on the y axis and the true value of μ on the x axis.**
+
+```{r, message = FALSE, warning = FALSE}
+plot_2 =
+  sim_results %>% 
+  group_by(mu) %>%
+  filter(decision == "reject") %>%
+  summarise(
+    avg_estimate = mean(estimate)) %>% 
+  ggplot(aes(x = mu, avg_estimate)) +
+  geom_point() +
+  geom_line() +
+  labs(x = "true mean",
+       y = "average estimate",
+       title = "Samples when the null is rejected")
+
+plot_1 + plot_2
+```
+
+For all samples, the average estimate of the mean is equal to the true mean.
+
+When the null is rejected, the average estimate of the mean is higher than the true mean is >0 and <4. The estimates become equal to the true mean when it is 4 or greater. This is likely because as power increases, the average estimate of the mean gets closer to the true mean among the samples when the null hypothesis is rejected.
