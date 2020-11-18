@@ -44,7 +44,6 @@ homicide_df =
   filter(city_state != "Tulsa_AL")
 ```
 
-
 Data exploration
 
 ```{r}
