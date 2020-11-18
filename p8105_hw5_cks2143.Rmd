@@ -27,11 +27,11 @@ scale_fill_discrete = scale_fill_viridis_d
 
 ## Problem 1
 
-Read in the data.
+**Read in the data.**
 
-```{r}
+```{r p1_inclass}
 homicide_df = 
-  read_csv("homicide_data/homicide-data.csv") %>% 
+  read_csv("data/homicide_data/homicide-data.csv") %>% 
   mutate(
     city_state = str_c(city, state, sep = "_"),
     resolved = case_when(
@@ -44,7 +44,7 @@ homicide_df =
   filter(city_state != "Tulsa_AL")
 ```
 
-Data exploration
+**Data exploration**
 
 ```{r}
 aggregate_df = 
@@ -56,7 +56,7 @@ aggregate_df =
   )
 ```
 
-Prop test for a single city
+**Prop test for a single city**
 
 ```{r}
 prop.test(
@@ -65,7 +65,7 @@ prop.test(
   broom::tidy()
 ```
 
-Iteration
+**Iteration**
 
 ```{r}
 results_df = 
@@ -109,26 +109,45 @@ homicide_df =
 ```
 
 
+## Problem 2
 
-## Problem 2 ideas ...
+**Create a tidy dataframe of the longitudinal data.**
 
-
-import one dataset 
-
-```{r}
-data_1 = read_csv("lda_data/con_01.csv")
-```
-
-```{r, error = TRUE}
+```{r, lda_tidy, message = FALSE, warning = FALSE}
 path_df = 
   tibble(
-    path = list.files("lda_data"),
-  ) %>% 
-  mutate(
-    path = str_c("lda_data/", path),
-    data = map(.............))
+    path = list.files("data/lda_data")) %>% 
+    mutate(path = str_c("data/lda_data/", path))
 
-read_csv(path_df$path[[1]])
+lda_tidydf = 
+  tibble(
+    id = path_df$path,
+    map_df(.x = path_df$path, ~read_csv(.x))
+    ) %>% 
+  mutate(
+    id = substr(id, 15, 20)
+    ) %>% 
+  separate(id, c("group", "id")) %>% 
+  pivot_longer(
+    week_1:week_8,
+    names_to = "week",
+    names_prefix = "week_",
+    values_to = "obsv"
+    ) %>% 
+  mutate(
+    id = as.numeric(id),
+    week = as.numeric(week)
+    )
 ```
+
+**Spaghetti plot of observations on each subject over time**
+
+```{r, message = FALSE, warning = FALSE}
+lda_tidydf %>% 
+  ggplot(aes(x = week, y = obsv, group = interaction(id, group), color = group)) + 
+    geom_line()
+```
+
+Based on the spaghetti plot, we can observe that observation values for the experimental group are generally higher than the control group. The experimental group shows some increase in values over time while the control group remains relatively stable.
 
 
