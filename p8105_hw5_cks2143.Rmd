@@ -196,7 +196,7 @@ plot_power =
   labs(
     x = "effect size",
     y = "power"
-  )
+    )
 
 plot_power
 ```
@@ -217,7 +217,7 @@ plot_1 =
     x = "true mean",
     y = "average estimate",
     title = "Avg estimate vs. true mean"
-  ) 
+    ) 
 ```
 
 **Plot showing the average estimate of μ̂ only in samples for which the null was rejected on the y axis and the true value of μ on the x axis.**
@@ -227,14 +227,15 @@ plot_2 =
   sim_results %>% 
   group_by(mu) %>%
   filter(decision == "reject") %>%
-  summarise(
-    avg_estimate = mean(estimate)) %>% 
+  summarise(avg_estimate = mean(estimate)) %>% 
   ggplot(aes(x = mu, avg_estimate)) +
   geom_point() +
   geom_line() +
-  labs(x = "true mean",
-       y = "average estimate",
-       title = "Samples when the null is rejected")
+  labs(
+    x = "true mean",
+    y = "average estimate",
+    title = "Samples when the null is rejected"
+    )
 
 plot_1 + plot_2
 ```
